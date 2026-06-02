@@ -329,7 +329,7 @@ elif page == "🏗️ Edificios por Proyecto":
 # La página que más vas a usar en tu flujo semanal.
 # Seleccionas proyecto → edificio → actualizas los 4 conteos.
 # ============================================================
-elif page == "✏️ Update Building":
+elif page == "✏️ Actualizar Edificio":
     st.title("✏️ Update Building")
 
     df_projects = get_all_projects()
