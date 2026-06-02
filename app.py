@@ -329,8 +329,8 @@ elif page == "🏗️ Edificios por Proyecto":
 # La página que más vas a usar en tu flujo semanal.
 # Seleccionas proyecto → edificio → actualizas los 4 conteos.
 # ============================================================
-elif page == "✏️ Actualizar Edificio":
-    st.title("✏️ Actualizar Edificio")
+elif page == "✏️ Update Building":
+    st.title("✏️ Update Building")
 
     df_projects = get_all_projects()
 
@@ -339,7 +339,7 @@ elif page == "✏️ Actualizar Edificio":
         st.stop()
 
     # Paso 1: elegir proyecto
-    selected_label = st.selectbox("Proyecto:", df_projects["label"].tolist())
+    selected_label = st.selectbox("Project:", df_projects["label"].tolist())
     row_proj = df_projects[df_projects["label"] == selected_label].iloc[0]
     project_id = int(row_proj["id"])
 
@@ -358,7 +358,7 @@ elif page == "✏️ Actualizar Edificio":
         f"{r['name']} ({r['type']})": int(r["id"])
         for _, r in df_buildings.iterrows()
     }
-    selected_building = st.selectbox("Edificio:", list(building_options.keys()))
+    selected_building = st.selectbox("Building:", list(building_options.keys()))
     building_id = building_options[selected_building]
 
     # Obtener la fila completa del edificio seleccionado
@@ -384,10 +384,10 @@ elif page == "✏️ Actualizar Edificio":
         # También permite corregir nombre y tipo si hubo un error
         col_a, col_b = st.columns(2)
         with col_a:
-            new_name = st.text_input("Nombre del edificio", value=row_b["name"])
+            new_name = st.text_input("Building name", value=row_b["name"])
         with col_b:
             new_type = st.selectbox(
-                "Tipo",
+                "Type Structure",
                 ["Condo", "MUS"],
                 index=0 if row_b["type"] == "condo" else 1
             )
@@ -400,7 +400,7 @@ elif page == "✏️ Actualizar Edificio":
             new_unmapped = st.number_input("Unmapped", min_value=0, value=int(row_b["unmapped"]))
             new_not_live = st.number_input("Not Live", min_value=0, value=int(row_b["not_live"]))
 
-        saved = st.form_submit_button("💾 Guardar cambios", use_container_width=True)
+        saved = st.form_submit_button("💾 Save Changes", use_container_width=True)
 
     if saved:
         update_building(
@@ -430,11 +430,11 @@ elif page == "➕ Nuevo Proyecto":
             county = st.text_input("County *", placeholder="Ej: Nelson County")
         with col2:
             city = st.text_input(
-                "Ciudad (opcional)",
+                "City (optional)",
                 placeholder="Dejar vacío si el contrato es de condado"
             )
 
-        submitted = st.form_submit_button("✅ Crear Proyecto", use_container_width=True)
+        submitted = st.form_submit_button("✅ Create Project", use_container_width=True)
 
     if submitted:
         if not state or not county:
@@ -443,7 +443,7 @@ elif page == "➕ Nuevo Proyecto":
             city_value = city.strip() if city.strip() else None
             add_project(state.strip(), county.strip(), city_value)
             label = f"{state} — {county}" + (f" — {city}" if city_value else "")
-            st.success(f"✅ Proyecto creado: {label}")
+            st.success(f"✅ Project created: {label}")
             st.info("Ahora ve a **➕ Nuevo Edificio** para agregar los condos y MUS de este proyecto.")
             st.rerun()
 
