@@ -119,11 +119,11 @@ if page == "📊 Dashboard":
     # ----------------------------------------------------------
     col1, col2, col3 = st.columns(3)
     with col1:
-        sel_states = st.multiselect("Estado",  options=sorted(df["state"].unique()))
+        sel_states = st.multiselect("State",  options=sorted(df["state"].unique()))
     with col2:
-        sel_types  = st.multiselect("Tipo",    options=["condo", "MUS"])
+        sel_types  = st.multiselect("Type",    options=["Condo", "MUS"])
     with col3:
-        sel_counties = st.multiselect("Condado", options=sorted(df["county"].unique()))
+        sel_counties = st.multiselect("County", options=sorted(df["county"].unique()))
 
     filtered = df.copy()
     if sel_states:
@@ -271,7 +271,7 @@ elif page == "🏗️ Edificios por Proyecto":
         for _, row in df_buildings.iterrows():
             texto_informe += f"| {row['name']} | {row['type']} | {int(row['assigned'])} | {int(row['mapped'])} | {int(row['unmapped'])} | {int(row['not_live'])} | **{int(row['left_to_review'])}** |\n"
         
-        texto_informe += "\n*Informe generado automáticamente por MUS&Condos TRACKER.*"
+        texto_informe += "\n*Informe generado automáticamente por Mor.*"
         
         st.text_area(
             label="Selecciona el texto y pégalo mor:",
@@ -388,7 +388,7 @@ elif page == "✏️ Actualizar Edificio":
         with col_b:
             new_type = st.selectbox(
                 "Tipo",
-                ["condo", "MUS"],
+                ["Condo", "MUS"],
                 index=0 if row_b["type"] == "condo" else 1
             )
 
@@ -426,8 +426,8 @@ elif page == "➕ Nuevo Proyecto":
     with st.form("new_project_form"):
         col1, col2 = st.columns(2)
         with col1:
-            state  = st.text_input("Estado *",  placeholder="Ej: Texas")
-            county = st.text_input("Condado *", placeholder="Ej: Nelson County")
+            state  = st.text_input("State *",  placeholder="Ej: Texas")
+            county = st.text_input("County *", placeholder="Ej: Nelson County")
         with col2:
             city = st.text_input(
                 "Ciudad (opcional)",
@@ -469,10 +469,10 @@ elif page == "➕ Nuevo Edificio":
         with col1:
             name  = st.text_input("Nombre del edificio *", placeholder="Ej: Sunrise Condominiums")
         with col2:
-            btype = st.selectbox("Tipo *", ["condo", "MUS"])
+            btype = st.selectbox("Type Structure *", ["Condo", "MUS"])
 
         st.markdown("---")
-        st.subheader("Conteos iniciales (opcional)")
+        st.subheader("Conteos iniciales")
 
         c1, c2, c3, c4 = st.columns(4)
         init_assigned = c1.number_input("Assigned", min_value=0, value=0)
