@@ -8,6 +8,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from database import (
+    init_db,
     add_project,
     add_building,
     update_building,
