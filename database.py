@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 # ⚠️ AQUÍ ESTÁ LA LÍNEA NUEVA: Pon tu enlace real de Supabase con tu contraseña real
-DATABASE_URL = "postgresql+psycopg2://postgres.tu_id_secreto:SeQpUKFDP7zdoN01@aws-0-us-east-1.pooler.supabase.com:5432/postgres"
+DATABASE_URL = postgresql+psycopg2://postgres:SeQpUKFDP7zdoN01@db.fmhnlfvonbewihkbgoer.supabase.co:5432/postgres
 
 def get_connection():
     """Crea y retorna el motor de conexión a Supabase."""
