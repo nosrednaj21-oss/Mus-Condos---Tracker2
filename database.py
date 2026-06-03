@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 # ⚠️ AQUÍ ESTÁ LA LÍNEA NUEVA: Pon tu enlace real de Supabase con tu contraseña real
 DATABASE_URL = "postgresql+psycopg2://postgres.fmhnlfvonbewihkbgoer:SeQpUKFDP7zdoN01@aws-1-us-east-2.pooler.supabase.com:6543/postgres"
