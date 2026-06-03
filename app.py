@@ -57,11 +57,11 @@ STATUS_COLORS = {
 
 }
 
-# @st.cache_resource(show_spinner=False)
-# def setup():
+ @st.cache_resource(show_spinner=False)
+ def setup():
     #init_db()
 
-#setup()
+setup()
 
 
 # ============================================================
