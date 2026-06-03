@@ -14,7 +14,7 @@ def add_project(state, county, city=None):
     engine = get_connection()
     query = """
         INSERT INTO projects (state, county, city)
-        VALUES (%(state)s, %(county)s, %(city)s)
+        VALUES (:state, :county, :city)
         RETURNING id;
     """
     with engine.begin() as conn:
@@ -26,8 +26,8 @@ def add_building(project_id, name, building_type="condo", assigned=0, mapped=0, 
     """Agrega un edificio amarrado a un proyecto en Supabase."""
     engine = get_connection()
     query = """
-        INSERT INTO buildings (project_id, name, type, assigned, mapped, unmapped, not_live)
-        VALUES (%(project_id)s, %(name)s, %(type)s, %(assigned)s, %(mapped)s, %(unmapped)s, %(not_live)s);
+        IINSERT INTO buildings (project_id, name, type, assigned, mapped, unmapped, not_live)
+        VALUES (:project_id, :name, :type, :assigned, :mapped, :unmapped, :not_live);
     """
     with engine.begin() as conn:
         conn.execute(text(query), {
@@ -40,10 +40,10 @@ def update_building(building_id, name, building_type, assigned, mapped, unmapped
     engine = get_connection()
     query = """
         UPDATE buildings
-        SET name = %(name)s, type = %(type)s, assigned = %(assigned)s, 
-            mapped = %(mapped)s, unmapped = %(unmapped)s, not_live = %(not_live)s, 
+        SET name = :name, type = :type, assigned = :assigned, 
+            mapped = :mapped, unmapped = :unmapped, not_live = :not_live, 
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = %(id)s;
+        WHERE id = :id;
     """
     with engine.begin() as conn:
         conn.execute(text(query), {
@@ -117,10 +117,10 @@ def delete_building(building_id):
     """Elimina un edificio individual de la nube."""
     engine = get_connection()
     with engine.begin() as conn:
-       conn.execute(text("DELETE FROM buildings WHERE id = %(id)s;"), {"id": building_id})
+      conn.execute(text("DELETE FROM buildings WHERE id = :id;"), {"id": building_id})
 
 def delete_project(project_id):
     """Elimina un proyecto completo (la restricción ON DELETE CASCADE borrará sus edificios automáticamente)."""
     engine = get_connection()
     with engine.begin() as conn:
-        conn.execute(text("DELETE FROM projects WHERE id = %(id)s;"), {"id": project_id})
+        conn.execute(text("DELETE FROM projects WHERE id = :id;"), {"id": project_id})
