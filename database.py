@@ -18,7 +18,7 @@ def add_project(state, county, city=None):
         RETURNING id;
     """
     with engine.begin() as conn:
-        result = conn.execute(pd.io.sql.SQLTextClauseRow(query), {"state": state, "county": county, "city": city})
+        result = conn.execute(text(query), {"state": state, "county": county, "city": city})
         new_id = result.fetchone()[0]
     return new_id
 
@@ -30,7 +30,7 @@ def add_building(project_id, name, building_type="condo", assigned=0, mapped=0, 
         VALUES (%(project_id)s, %(name)s, %(type)s, %(assigned)s, %(mapped)s, %(unmapped)s, %(not_live)s);
     """
     with engine.begin() as conn:
-        conn.execute(pd.io.sql.SQLTextClauseRow(query), {
+        conn.execute(text(query), {
             "project_id": project_id, "name": name, "type": building_type,
             "assigned": assigned, "mapped": mapped, "unmapped": unmapped, "not_live": not_live
         })
@@ -46,7 +46,7 @@ def update_building(building_id, name, building_type, assigned, mapped, unmapped
         WHERE id = %(id)s;
     """
     with engine.begin() as conn:
-        conn.execute(pd.io.sql.SQLTextClauseRow(query), {
+        conn.execute(text(query), {
             "name": name, "type": building_type, "assigned": assigned,
             "mapped": mapped, "unmapped": unmapped, "not_live": not_live, "id": building_id
         })
@@ -117,10 +117,10 @@ def delete_building(building_id):
     """Elimina un edificio individual de la nube."""
     engine = get_connection()
     with engine.begin() as conn:
-        conn.execute(pd.io.sql.SQLTextClauseRow("DELETE FROM buildings WHERE id = %(id)s;"), {"id": building_id})
+       conn.execute(text("DELETE FROM buildings WHERE id = %(id)s;"), {"id": building_id})
 
 def delete_project(project_id):
     """Elimina un proyecto completo (la restricción ON DELETE CASCADE borrará sus edificios automáticamente)."""
     engine = get_connection()
     with engine.begin() as conn:
-        conn.execute(pd.io.sql.SQLTextClauseRow("DELETE FROM projects WHERE id = %(id)s;"), {"id": project_id})
+        conn.execute(text("DELETE FROM projects WHERE id = %(id)s;"), {"id": project_id})
