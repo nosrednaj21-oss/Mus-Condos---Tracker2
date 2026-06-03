@@ -58,7 +58,7 @@ STATUS_COLORS = {
 }
 
 @st.cache_resource(show_spinner=False)
- def setup():
+def setup():
     init_db()
 
 setup()
