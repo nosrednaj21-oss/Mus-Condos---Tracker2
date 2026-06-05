@@ -1,0 +1,13 @@
+# Base de datos local — no subir a GitHub
+*.db
+
+# Secrets — NUNCA subir a GitHub
+.streamlit/secrets.toml
+
+# Archivos de entorno virtual
+.venv/
+.venv-1/
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc

@@ -23,7 +23,7 @@ from database import (
 # Configuración de página — siempre debe ir primero
 # ------------------------------------------------------------
 st.set_page_config(
-    page_title="RE Tracker",
+    page_title="Mus-Condos Tracker",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -52,12 +52,13 @@ st.markdown(f"""
 # Colores consistentes para los 4 estados
 STATUS_COLORS = {
     "assigned": "#2ecc71",
-    "mapped":   "#4a90d9",
+    "mapped":   "#04D9FF",
     "unmapped": "#e67e22",
     "not_live": "#ffd343",
+
 }
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def setup():
     init_db()
 
@@ -68,7 +69,7 @@ setup()
 # SIDEBAR
 # ============================================================
 with st.sidebar:
-    st.title("🏢 RE Tracker")
+    st.title("🏢 Mus&Condos")
     st.markdown("---")
 
     page = st.radio(
@@ -97,15 +98,19 @@ if page == "📊 Dashboard":
     if df.empty:
         st.info("No hay datos aún. Ve a **➕ Nuevo Proyecto** para empezar.")
         st.stop()
+        
+    if "left_to_review" not in df.columns:
+        df["left_to_review"] = df["assigned"] - df["mapped"] - df["unmapped"] - df["not_live"]
 
     # ----------------------------------------------------------
     # MÉTRICAS GLOBALES — suma de todos los edificios
     # ----------------------------------------------------------
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total Assigned", int(df["assigned"].sum()))
-    c2.metric("Total Mapped",   int(df["mapped"].sum()))
-    c3.metric("Total Unmapped", int(df["unmapped"].sum()))
-    c4.metric("Total Not Live", int(df["not_live"].sum()))
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Total Assigned",   int(df["assigned"].sum()))
+    c2.metric("Total Mapped",     int(df["mapped"].sum()))
+    c3.metric("Total Unmapped",   int(df["unmapped"].sum()))
+    c4.metric("Total Not Live",   int(df["not_live"].sum()))
+    c5.metric("Left to review",   int(df["left_to_review"].sum()))
 
     st.markdown("---")
 
@@ -114,11 +119,11 @@ if page == "📊 Dashboard":
     # ----------------------------------------------------------
     col1, col2, col3 = st.columns(3)
     with col1:
-        sel_states = st.multiselect("Estado",  options=sorted(df["state"].unique()))
+        sel_states = st.multiselect("State",  options=sorted(df["state"].unique()))
     with col2:
-        sel_types  = st.multiselect("Tipo",    options=["condo", "MUS"])
+        sel_types  = st.multiselect("Type",    options=["Condo", "MUS"])
     with col3:
-        sel_counties = st.multiselect("Condado", options=sorted(df["county"].unique()))
+        sel_counties = st.multiselect("County", options=sorted(df["county"].unique()))
 
     filtered = df.copy()
     if sel_states:
@@ -171,6 +176,7 @@ if page == "📊 Dashboard":
             "mapped":         "Mapped",
             "unmapped":       "Unmapped",
             "not_live":       "Not Live",
+            "left_to_review": "Left to review",
             "updated_at":     "Actualizado",
         }),
         use_container_width=True,
@@ -200,32 +206,103 @@ elif page == "🏗️ Edificios por Proyecto":
     if df_buildings.empty:
         st.info("Este proyecto no tiene edificios. Ve a **➕ Nuevo Edificio** para agregar uno.")
         st.stop()
+    if "left_to_review" not in df_buildings.columns:
+        df_buildings["left_to_review"] = df_buildings["assigned"] - df_buildings["mapped"] - df_buildings["unmapped"] - df_buildings["not_live"]
 
     # Totales del proyecto (suma de todos sus edificios)
     st.subheader(f"Totales — {selected_label}")
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Assigned", int(df_buildings["assigned"].sum()))
     c2.metric("Mapped",   int(df_buildings["mapped"].sum()))
     c3.metric("Unmapped", int(df_buildings["unmapped"].sum()))
     c4.metric("Not Live", int(df_buildings["not_live"].sum()))
+    c5.metric("Left to review", int(df_buildings["left_to_review"].sum()))
 
     st.markdown("---")
 
     # Tabla de edificios del proyecto
     st.subheader("Edificios")
     st.dataframe(
-        df_buildings[["name", "type", "assigned", "mapped", "unmapped", "not_live", "updated_at"]].rename(columns={
-            "name":       "Edificio",
-            "type":       "Tipo",
-            "assigned":   "Assigned",
-            "mapped":     "Mapped",
-            "unmapped":   "Unmapped",
-            "not_live":   "Not Live",
-            "updated_at": "Actualizado",
+        df_buildings[["name", "type", "assigned", "mapped", "unmapped", "not_live", "left_to_review", "updated_at"]].rename(columns={
+            "name":           "Edificio",
+            "type":           "Tipo",
+            "assigned":       "Assigned",
+            "mapped":         "Mapped",
+            "unmapped":       "Unmapped",
+            "not_live":       "Not Live",
+            "left_to_review": "Left to review",
+            "updated_at":     "Actualizado",
         }),
         use_container_width=True,
         hide_index=True,
     )
+    
+    #Reporte en texto code
+    st.markdown("---")
+    st.subheader("📋 Herramientas de Reporte Semanal")
+    
+    tab_texto, tab_archivo = st.tabs(["✉️ Reporte en Texto para Jira", "💾 Descargar Archivo (Excel/CSV)"])
+    
+    with tab_texto:
+        total_assigned = int(df_buildings["assigned"].sum())
+        total_mapped = int(df_buildings["mapped"].sum())
+        total_unmapped = int(df_buildings["unmapped"].sum())
+        total_not_live = int(df_buildings["not_live"].sum())
+        total_left = int(df_buildings["left_to_review"].sum())
+        
+        percentage_advance = round((total_mapped / total_assigned * 100), 1) if total_assigned > 0 else 0
+        
+        texto_informe = f"""### 📊 INFORME SEMANAL DE PROYECTO
+**Proyecto:** {selected_label}
+**Estado de Avance General:** {percentage_advance}%
+
+#### 📈 RESUMEN DE METRICAS GLOBALES
+* **Total Listings Asignados:** {total_assigned}
+* **Total Mapeados:** {total_mapped}
+* **Total No Mapeados:** {total_unmapped}
+* **Total Not Live:** {total_not_live}
+* **Total Left to Map (Sin Revisar):** {total_left}
+
+#### 🏢 DETALLE POR CONDO / MUS
+| Condo / MU | Tipo | Asignados | Mapeados | No Mapeados | Not Live | Left to Map |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+"""
+
+        for _, row in df_buildings.iterrows():
+            texto_informe += f"| {row['name']} | {row['type']} | {int(row['assigned'])} | {int(row['mapped'])} | {int(row['unmapped'])} | {int(row['not_live'])} | **{int(row['left_to_review'])}** |\n"
+        
+        texto_informe += "\n*Informe generado automáticamente por Mor.*"
+        
+        st.text_area(
+            label="Selecciona el texto y pégalo mor:",
+            value=texto_informe,
+            height=300
+        )
+    
+    with tab_archivo:
+        st.write("Genera un archivo compatible con Excel con toda la información del proyecto actual:")
+        
+        reporte_df = df_buildings[[
+            "name", "type", "assigned", "mapped", "unmapped", "not_live", "left_to_review"
+        ]].rename(columns={
+            "name":           "Condo / MU",
+            "type":           "Tipo",
+            "assigned":       "Listings Asignados",
+            "mapped":         "Mapeados",
+            "unmapped":       "No Mapeados",
+            "not_live":       "Not Live",
+            "left_to_review": "Left to Map (Sin Revisar)"
+        })
+        
+        csv_data = reporte_df.to_csv(index=False, sep=";", encoding="utf-8-sig")
+
+        st.download_button(
+            label="📥 Descargar Reporte Semanal (.csv)",
+            data=csv_data,
+            file_name=f"Reporte_Semanal_{selected_label.replace(' — ', '_')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
 
     # Gráfica solo de este proyecto
     chart_df = df_buildings.melt(
@@ -253,7 +330,7 @@ elif page == "🏗️ Edificios por Proyecto":
 # Seleccionas proyecto → edificio → actualizas los 4 conteos.
 # ============================================================
 elif page == "✏️ Actualizar Edificio":
-    st.title("✏️ Actualizar Edificio")
+    st.title("✏️ Update Building")
 
     df_projects = get_all_projects()
 
@@ -262,11 +339,14 @@ elif page == "✏️ Actualizar Edificio":
         st.stop()
 
     # Paso 1: elegir proyecto
-    selected_label = st.selectbox("Proyecto:", df_projects["label"].tolist())
+    selected_label = st.selectbox("Project:", df_projects["label"].tolist())
     row_proj = df_projects[df_projects["label"] == selected_label].iloc[0]
     project_id = int(row_proj["id"])
 
     df_buildings = get_buildings_by_project(project_id)
+    
+    if "left_to_review" not in df_buildings.columns:
+        df_buildings["left_to_review"] = df_buildings["assigned"] - df_buildings["mapped"] - df_buildings["unmapped"] - df_buildings["not_live"]
 
     if df_buildings.empty:
         st.info("Este proyecto no tiene edificios aún.")
@@ -278,7 +358,7 @@ elif page == "✏️ Actualizar Edificio":
         f"{r['name']} ({r['type']})": int(r["id"])
         for _, r in df_buildings.iterrows()
     }
-    selected_building = st.selectbox("Edificio:", list(building_options.keys()))
+    selected_building = st.selectbox("Building:", list(building_options.keys()))
     building_id = building_options[selected_building]
 
     # Obtener la fila completa del edificio seleccionado
@@ -288,11 +368,14 @@ elif page == "✏️ Actualizar Edificio":
 
     # Muestra los conteos actuales como referencia
     st.subheader("Conteos actuales")
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Assigned", int(row_b["assigned"]))
     m2.metric("Mapped",   int(row_b["mapped"]))
     m3.metric("Unmapped", int(row_b["unmapped"]))
     m4.metric("Not Live", int(row_b["not_live"]))
+    
+    not_review_yet = int(row_b["left_to_review"])
+    m5.metric("Left to review", not_review_yet, delta=-not_review_yet if not_review_yet > 0 else None, delta_color="inverse")
 
     st.markdown("---")
     st.subheader("Nuevos valores")
@@ -301,11 +384,11 @@ elif page == "✏️ Actualizar Edificio":
         # También permite corregir nombre y tipo si hubo un error
         col_a, col_b = st.columns(2)
         with col_a:
-            new_name = st.text_input("Nombre del edificio", value=row_b["name"])
+            new_name = st.text_input("Building name", value=row_b["name"])
         with col_b:
             new_type = st.selectbox(
-                "Tipo",
-                ["condo", "MUS"],
+                "Type Structure",
+                ["Condo", "MUS"],
                 index=0 if row_b["type"] == "condo" else 1
             )
 
@@ -317,7 +400,7 @@ elif page == "✏️ Actualizar Edificio":
             new_unmapped = st.number_input("Unmapped", min_value=0, value=int(row_b["unmapped"]))
             new_not_live = st.number_input("Not Live", min_value=0, value=int(row_b["not_live"]))
 
-        saved = st.form_submit_button("💾 Guardar cambios", use_container_width=True)
+        saved = st.form_submit_button("💾 Save Changes", use_container_width=True)
 
     if saved:
         update_building(
@@ -343,15 +426,15 @@ elif page == "➕ Nuevo Proyecto":
     with st.form("new_project_form"):
         col1, col2 = st.columns(2)
         with col1:
-            state  = st.text_input("Estado *",  placeholder="Ej: Texas")
-            county = st.text_input("Condado *", placeholder="Ej: Nelson County")
+            state  = st.text_input("State *",  placeholder="Ej: Texas")
+            county = st.text_input("County *", placeholder="Ej: Nelson County")
         with col2:
             city = st.text_input(
-                "Ciudad (opcional)",
+                "City (optional)",
                 placeholder="Dejar vacío si el contrato es de condado"
             )
 
-        submitted = st.form_submit_button("✅ Crear Proyecto", use_container_width=True)
+        submitted = st.form_submit_button("✅ Create Project", use_container_width=True)
 
     if submitted:
         if not state or not county:
@@ -360,7 +443,7 @@ elif page == "➕ Nuevo Proyecto":
             city_value = city.strip() if city.strip() else None
             add_project(state.strip(), county.strip(), city_value)
             label = f"{state} — {county}" + (f" — {city}" if city_value else "")
-            st.success(f"✅ Proyecto creado: {label}")
+            st.success(f"✅ Project created: {label}")
             st.info("Ahora ve a **➕ Nuevo Edificio** para agregar los condos y MUS de este proyecto.")
             st.rerun()
 
@@ -386,10 +469,10 @@ elif page == "➕ Nuevo Edificio":
         with col1:
             name  = st.text_input("Nombre del edificio *", placeholder="Ej: Sunrise Condominiums")
         with col2:
-            btype = st.selectbox("Tipo *", ["condo", "MUS"])
+            btype = st.selectbox("Type Structure *", ["Condo", "MUS"])
 
         st.markdown("---")
-        st.subheader("Conteos iniciales (opcional)")
+        st.subheader("Conteos iniciales")
 
         c1, c2, c3, c4 = st.columns(4)
         init_assigned = c1.number_input("Assigned", min_value=0, value=0)
