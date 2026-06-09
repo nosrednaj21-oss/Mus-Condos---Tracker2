@@ -58,7 +58,7 @@ STATUS_COLORS = {
 
 }
 
-@st.cache_resource(show_spinner=False)
+@st.cache_resource
 def setup():
     init_db()
 
@@ -69,7 +69,7 @@ setup()
 # SIDEBAR
 # ============================================================
 with st.sidebar:
-    st.title("🏢 Mus&Condos")
+    st.title("🏢 Mus&Condos") 
     st.markdown("---")
 
     page = st.radio(
