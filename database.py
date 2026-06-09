@@ -1,155 +1,163 @@
 # ============================================================
-# database.py  —  v3
-# Dos tablas: projects (ubicación) y buildings (edificios).
-# Un proyecto tiene muchos edificios.
-# Los conteos viven en cada edificio individual.
+# database.py — version Supabase/PostgreSQL
+# En lugar de un archivo .db local, los datos viven en
+# Supabase y son accesibles desde cualquier computadora.
 # ============================================================
 
-import sqlite3
+import psycopg2                        # Librería para conectar Python con PostgreSQL
+import psycopg2.extras                 # Permite acceder a columnas por nombre (como row_factory en SQLite)
 import pandas as pd
-from datetime import datetime
-
-DB_NAME = "mus_condo.db"
+import streamlit as st                 # Necesario para leer los Secrets de Streamlit
 
 
 # ------------------------------------------------------------
 # get_connection()
-# Abre la conexión al archivo de base de datos.
-# row_factory permite leer columnas por nombre (row["state"]).
+# Lee la URL de la base de datos desde los Secrets de Streamlit.
+# Los Secrets se configuran en share.streamlit.io → Settings → Secrets
+# y NUNCA se suben a GitHub — son privados y seguros.
 # ------------------------------------------------------------
 def get_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
+    # st.secrets["DATABASE_URL"] lee el valor que guardaste en Streamlit Secrets
+    # En local puedes crear un archivo .streamlit/secrets.toml con el mismo valor
+    conn = psycopg2.connect(st.secrets["DATABASE_URL"])
+
+    # autocommit=False significa que debes llamar conn.commit() manualmente
+    # para confirmar los cambios — igual que en SQLite
+    conn.autocommit = False
     return conn
 
 
 # ------------------------------------------------------------
 # init_db()
-# Crea las dos tablas si no existen.
-# Llámala una vez al iniciar la app.
+# Crea las tablas si no existen.
+# PostgreSQL usa SERIAL en lugar de AUTOINCREMENT de SQLite.
+# TEXT funciona igual en ambos.
 # ------------------------------------------------------------
 def init_db():
     conn = get_connection()
-    cursor = conn.cursor()
+
+    # RealDictCursor permite acceder a columnas por nombre: row["state"]
+    # Es el equivalente de row_factory = sqlite3.Row en SQLite
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     # ----------------------------------------------------------
     # TABLA: projects
-    # Solo guarda la ubicación geográfica.
-    # city puede ser NULL cuando el contrato cubre todo el condado.
+    # SERIAL = equivalente a AUTOINCREMENT en SQLite
     # ----------------------------------------------------------
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS projects (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            state      TEXT    NOT NULL,
-            county     TEXT    NOT NULL,
-            city       TEXT,                      -- NULL si es contrato de condado
-            created_at TEXT    DEFAULT CURRENT_TIMESTAMP
+            id         SERIAL PRIMARY KEY,
+            state      TEXT   NOT NULL,
+            county     TEXT   NOT NULL,
+            city       TEXT,
+            created_at TEXT   DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS')
         )
     """)
 
     # ----------------------------------------------------------
     # TABLA: buildings
-    # Cada edificio pertenece a un proyecto (project_id).
-    # Guarda nombre, tipo y los 4 conteos individuales.
     # ----------------------------------------------------------
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS buildings (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL,           -- Liga con la tabla projects
-            name       TEXT    NOT NULL,           -- Nombre del edificio (street view / public records)
-            type       TEXT    NOT NULL DEFAULT 'condo',  -- "condo" o "MUS"
+            id         SERIAL  PRIMARY KEY,
+            project_id INTEGER NOT NULL,
+            name       TEXT    NOT NULL,
+            type       TEXT    NOT NULL DEFAULT 'condo',
             assigned   INTEGER DEFAULT 0,
             mapped     INTEGER DEFAULT 0,
             unmapped   INTEGER DEFAULT 0,
             not_live   INTEGER DEFAULT 0,
-            updated_at TEXT    DEFAULT (datetime('now', 'localtime')),
+            updated_at TEXT    DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS'),
             FOREIGN KEY (project_id) REFERENCES projects(id)
         )
     """)
 
     conn.commit()
+    cursor.close()
     conn.close()
 
 
 # ------------------------------------------------------------
 # add_project(state, county, city)
-# Inserta un nuevo proyecto.
-# city es opcional — queda NULL si no se pasa.
-# Retorna el ID del proyecto creado.
+# En PostgreSQL se usa RETURNING id para obtener el ID
+# del registro recién insertado — equivalente a lastrowid en SQLite.
 # ------------------------------------------------------------
 def add_project(state, county, city=None):
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
+    # RETURNING id le dice a PostgreSQL que retorne el ID del registro insertado
+    # En SQLite usabas cursor.lastrowid — aquí es diferente
     cursor.execute("""
         INSERT INTO projects (state, county, city)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
+        RETURNING id
     """, (state, county, city))
 
-    new_id = cursor.lastrowid
+    # fetchone() obtiene la primera (y única) fila del resultado
+    new_id = cursor.fetchone()["id"]
     conn.commit()
+    cursor.close()
     conn.close()
     return new_id
 
 
 # ------------------------------------------------------------
-# add_building(project_id, name, type, assigned, mapped, unmapped, not_live)
-# Agrega un edificio a un proyecto existente.
-# Los conteos son opcionales — por defecto arrancan en 0.
-# Retorna el ID del edificio creado.
+# add_building()
+# Igual que add_project pero para edificios.
+# Nota: PostgreSQL usa %s como placeholder en lugar de ? de SQLite.
 # ------------------------------------------------------------
 def add_building(project_id, name, building_type="condo",
                  assigned=0, mapped=0, unmapped=0, not_live=0):
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     cursor.execute("""
         INSERT INTO buildings (project_id, name, type, assigned, mapped, unmapped, not_live)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
     """, (project_id, name, building_type, assigned, mapped, unmapped, not_live))
 
-    new_id = cursor.lastrowid
+    new_id = cursor.fetchone()["id"]
     conn.commit()
+    cursor.close()
     conn.close()
     return new_id
 
 
 # ------------------------------------------------------------
-# update_building(building_id, name, type, assigned, mapped, unmapped, not_live)
-# Actualiza los datos y conteos de un edificio existente.
-# También registra la fecha de la última actualización.
+# update_building()
+# NOW() en PostgreSQL es equivalente a CURRENT_TIMESTAMP en SQLite.
 # ------------------------------------------------------------
 def update_building(building_id, name, building_type, assigned, mapped, unmapped, not_live):
     conn = get_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
     cursor.execute("""
         UPDATE buildings
-        SET name       = ?,
-            type       = ?,
-            assigned   = ?,
-            mapped     = ?,
-            unmapped   = ?,
-            not_live   = ?,
-            updated_at = datetime('now', 'localtime')
-        WHERE id = ?
+        SET name       = %s,
+            type       = %s,
+            assigned   = %s,
+            mapped     = %s,
+            unmapped   = %s,
+            not_live   = %s,
+            updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+        WHERE id = %s
     """, (name, building_type, assigned, mapped, unmapped, not_live, building_id))
 
     conn.commit()
+    cursor.close()
     conn.close()
 
 
 # ------------------------------------------------------------
 # get_all_projects()
-# Retorna todos los proyectos con una etiqueta legible.
-# Ej: "Florida — Miami-Dade — Miami"
-#     "Texas — Nelson County"  (sin ciudad)
-# También incluye el total de edificios por proyecto.
+# pd.read_sql_query funciona igual con PostgreSQL que con SQLite.
+# Solo cambia la conexión que se le pasa.
 # ------------------------------------------------------------
 def get_all_projects():
     conn = get_connection()
 
-    # Cuenta cuántos edificios tiene cada proyecto con un subquery
     df = pd.read_sql_query("""
         SELECT
             p.id,
@@ -166,7 +174,6 @@ def get_all_projects():
 
     conn.close()
 
-    # Construye etiqueta legible para dropdowns
     def make_label(row):
         label = f"{row['state']} — {row['county']}"
         if row['city']:
@@ -179,15 +186,17 @@ def get_all_projects():
 
 # ------------------------------------------------------------
 # get_buildings_by_project(project_id)
-# Retorna todos los edificios de un proyecto específico.
 # ------------------------------------------------------------
 def get_buildings_by_project(project_id):
     conn = get_connection()
 
     df = pd.read_sql_query("""
-        SELECT id, name, type, assigned, mapped, unmapped, not_live, (assigned - mapped - unmapped - not_live) AS left_to_review, updated_at
+        SELECT
+            id, name, type, assigned, mapped, unmapped, not_live,
+            (assigned - mapped - unmapped - not_live) AS left_to_review,
+            updated_at
         FROM buildings
-        WHERE project_id = ?
+        WHERE project_id = %s
         ORDER BY type, name
     """, conn, params=(project_id,))
 
@@ -197,8 +206,6 @@ def get_buildings_by_project(project_id):
 
 # ------------------------------------------------------------
 # get_full_summary()
-# Retorna todos los edificios con su proyecto incluido.
-# Útil para el Dashboard general.
 # ------------------------------------------------------------
 def get_full_summary():
     conn = get_connection()
@@ -224,7 +231,6 @@ def get_full_summary():
 
     conn.close()
 
-    # Etiqueta del proyecto para agrupar en gráficas
     def make_label(row):
         label = f"{row['state']} — {row['county']}"
         if row['city']:
@@ -237,32 +243,25 @@ def get_full_summary():
 
 # ------------------------------------------------------------
 # delete_building(building_id)
-# Elimina un edificio por su ID.
 # ------------------------------------------------------------
 def delete_building(building_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM buildings WHERE id = ?", (building_id,))
+    cursor.execute("DELETE FROM buildings WHERE id = %s", (building_id,))
     conn.commit()
+    cursor.close()
     conn.close()
 
 
 # ------------------------------------------------------------
 # delete_project(project_id)
-# Elimina un proyecto y todos sus edificios.
-# Primero borra los edificios (hijos) para no romper
-# la integridad referencial de la base de datos.
+# Primero borra los edificios hijos, luego el proyecto padre.
 # ------------------------------------------------------------
 def delete_project(project_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM buildings WHERE project_id = ?", (project_id,))
-    cursor.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+    cursor.execute("DELETE FROM buildings WHERE project_id = %s", (project_id,))
+    cursor.execute("DELETE FROM projects WHERE id = %s", (project_id,))
     conn.commit()
+    cursor.close()
     conn.close()
-
-
-# ------------------------------------------------------------
-# Bloque de prueba — solo se ejecuta con: python database.py
-# Crea la DB e inserta proyectos y edificios de ejemplo.
-# ------------------------------------------------------------
