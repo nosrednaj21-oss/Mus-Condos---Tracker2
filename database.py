@@ -132,6 +132,14 @@ def add_building(project_id, name, building_type="condo",
 def update_building(building_id, name, building_type, assigned, mapped, unmapped, not_live):
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    
+    print(f"building_id: {building_id} tipo: {type(building_id)}")
+    print(f"name: {name} tipo: {type(name)}")
+    print(f"building_type: {building_type} tipo: {type(building_type)}")
+    print(f"assigned: {assigned} tipo: {type(assigned)}")
+    print(f"mapped: {mapped} tipo: {type(mapped)}")
+    print(f"unmapped: {unmapped} tipo: {type(unmapped)}")
+    print(f"not_live: {not_live} tipo: {type(not_live)}")
 
     cursor.execute("""
         UPDATE buildings
