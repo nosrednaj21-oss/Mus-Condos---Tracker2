@@ -410,7 +410,7 @@ elif page == "✏️ Actualizar Edificio":
             assigned=int(new_assigned),
             mapped=int(new_mapped),
             unmapped=int(new_unmapped),
-            not_live=(new_not_live),
+            not_live=int(new_not_live),
         )
         st.success(f"✅ '{new_name}' actualizado.")
         st.rerun()
