@@ -320,7 +320,6 @@ elif page == "🏗️ Edificios por Proyecto":
         color_discrete_map=STATUS_COLORS,
         labels={"name": "Edificio"},
     )
-    fig.update_layout(xaxis_tickangle=-20, height=380)
     st.plotly_chart(fig, use_container_width=True)
 
 
