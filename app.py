@@ -313,10 +313,10 @@ elif page == "🏗️ Edificios por Proyecto":
     )
     fig = px.bar(
         chart_df,
-        x="name",
         y="Cantidad",
+        x="name",
         color="Status",
-        barmode="group",
+        barmode="stack",
         color_discrete_map=STATUS_COLORS,
         labels={"name": "Edificio"},
     )
