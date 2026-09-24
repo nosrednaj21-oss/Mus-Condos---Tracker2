@@ -145,10 +145,10 @@ if page == "📊 Dashboard":
 
     fig = px.bar(
         chart_df,
-        x="building_name",
-        y="Cantidad",
+        x="Cantidad",
+        y="building_name"
         color="Status",
-        barmode="group",
+        barmode="stack",
         color_discrete_map=STATUS_COLORS,
         facet_col="project_label",      # Separa la gráfica en paneles por proyecto
         facet_col_wrap=2,               # Máximo 2 proyectos por fila
