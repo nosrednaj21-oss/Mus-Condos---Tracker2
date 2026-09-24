@@ -150,8 +150,8 @@ if page == "📊 Dashboard":
         color="Status",
         barmode="stack",
         color_discrete_map=STATUS_COLORS,
-        facet_col="project_label",      # Separa la gráfica en paneles por proyecto
-        facet_col_wrap=2,               # Máximo 2 proyectos por fila
+                                         # Separa la gráfica en paneles por proyecto
+                                         # Máximo 2 proyectos por fila
         labels={"building_name": "Edificio"},
         title="Listings por Edificio",
         hover_data=["project_label", "type"],
