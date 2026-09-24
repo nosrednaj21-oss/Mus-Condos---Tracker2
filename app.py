@@ -146,7 +146,7 @@ if page == "📊 Dashboard":
     fig = px.bar(
         chart_df,
         x="Cantidad",
-        y="building_name"
+        y="building_name",
         color="Status",
         barmode="stack",
         color_discrete_map=STATUS_COLORS,
